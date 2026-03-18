@@ -12,7 +12,6 @@
         body { font-family: -apple-system, sans-serif; background-color: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
         .master-container { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 500px; }
         
-        /* Navigation Tabs */
         .nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 12px; }
         .nav-tab { flex: 1; cursor: pointer; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 13px; }
         .nav-tab.active { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -20,34 +19,30 @@
         .pane { display: none; }
         .pane.active { display: block; }
 
-        /* Scoring Displays */
         .tab-score-display { text-align: center; margin-bottom: 20px; padding: 15px; background: #f0f4ff; border-radius: 12px; }
         .score-val { font-size: 3rem; font-weight: 900; display: block; }
         .score-label { font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* Shared UI */
         .section-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin: 15px 0 8px; color: #888; }
         .main-action { width: 100%; padding: 16px; border: none; border-radius: 12px; background: #000; color: #fff; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
         .secondary-btn { background: none; border: none; color: #666; cursor: pointer; text-decoration: underline; font-size: 13px; margin: 10px 0; width: 100%; }
 
-        /* Wordle */
-        .wordle-input { width: 100%; padding: 15px; font-size: 1.5rem; text-align: center; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; }
+        textarea { width: 100%; height: 100px; border-radius: 8px; border: 2px solid #ddd; padding: 10px; box-sizing: border-box; font-size: 16px; font-family: inherit; }
 
-        /* Connections */
         .btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         .color-square { border: 1px solid rgba(0,0,0,0.1); height: 45px; border-radius: 8px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         .y { background: var(--yellow); } .g { background: var(--green); } .b { background: var(--blue); } .p { background: var(--purple); }
+        
         .custom-row-box { background: #fdfdfd; padding: 15px; border-radius: 12px; border: 1px solid #eee; margin-top: 10px; }
         .slots { display: flex; gap: 8px; justify-content: center; margin-bottom: 15px; }
         .slot { width: 40px; height: 40px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #ddd; }
         .preview-area { font-size: 22px; text-align: center; letter-spacing: 4px; margin: 15px 0; min-height: 30px; line-height: 1.4; border-top: 1px solid #eee; padding-top: 10px; }
-        textarea { width: 100%; height: 100px; border-radius: 8px; border: 2px solid #ddd; padding: 10px; box-sizing: border-box; }
+        
         table { width: 100%; font-size: 12px; margin-top: 10px; border-collapse: collapse; text-align: left; }
         th, td { padding: 8px; border-bottom: 1px solid #eee; }
 
-        /* Strands */
         #strands-display { min-height: 80px; background: white; border: 3px solid #e0e0e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 20px; padding: 10px; word-break: break-all; }
-        .strands-btns { display: flex; gap: 15px; justify-content: center; }
+        .strands-btns { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; }
         .s-btn { font-size: 2rem; padding: 10px 20px; border-radius: 12px; border: none; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
         .s-btn:active { transform: translateY(2px); }
     </style>
@@ -64,12 +59,13 @@
 
     <div id="wordle" class="pane active">
         <div class="tab-score-display">
-            <span class="score-label">Wordle Points (Inverted)</span>
+            <span class="score-label">Wordle Score</span>
             <span class="score-val" id="w-score-display">0</span>
+            <div id="wordleBreakdown"></div>
         </div>
-        <div class="section-title">Guesses (1-6)</div>
-        <input type="text" id="wordleVal" class="wordle-input" placeholder="Enter guesses (e.g. 3)" oninput="updateAll()">
-        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 10px;">1=6pts, 2=5pts, 3=4pts, 4=3pts, 5=2pts, 6=1pt</p>
+        <div class="section-title">Paste Wordle Results</div>
+        <textarea id="wordleInput" placeholder="Paste Wordle share text here..." oninput="updateAll()"></textarea>
+        <button class="secondary-btn" onclick="resetWordle()">Clear Wordle</button>
     </div>
 
     <div id="connections" class="pane">
@@ -80,8 +76,8 @@
         </div>
 
         <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
-            <div class="nav-tab active" id="btnBuild" onclick="connMode('build')">Builder</div>
-            <div class="nav-tab" id="btnPaste" onclick="connMode('paste')">Paste</div>
+            <div class="nav-tab active" id="btnConnBuild" onclick="connMode('build')">Builder</div>
+            <div class="nav-tab" id="btnConnPaste" onclick="connMode('paste')">Paste</div>
         </div>
 
         <div id="connBuild">
@@ -108,7 +104,7 @@
         </div>
 
         <div id="connPaste" style="display:none">
-            <textarea id="connInput" placeholder="Paste NYT share text..." oninput="updateAll()"></textarea>
+            <textarea id="connInput" placeholder="Paste Connections share text here..." oninput="updateAll()"></textarea>
         </div>
 
         <div class="preview-area" id="connPreview"></div>
@@ -120,12 +116,25 @@
             <span class="score-label">Strands Score</span>
             <span class="score-val" id="s-score-display">0</span>
         </div>
-        <div id="strands-display">...</div>
-        <div class="strands-btns">
-            <button class="s-btn" onclick="addStrand('🔵')">🔵</button>
-            <button class="s-btn" onclick="addStrand('💡')">💡</button>
-            <button class="s-btn" onclick="addStrand('🟡')">🟡</button>
+
+        <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
+            <div class="nav-tab active" id="btnStrandsBuild" onclick="strandsMode('build')">Builder</div>
+            <div class="nav-tab" id="btnStrandsPaste" onclick="strandsMode('paste')">Paste</div>
         </div>
+
+        <div id="strandsBuild">
+            <div id="strands-display">...</div>
+            <div class="strands-btns">
+                <button class="s-btn" onclick="addStrand('🔵')">🔵</button>
+                <button class="s-btn" onclick="addStrand('💡')">💡</button>
+                <button class="s-btn" onclick="addStrand('🟡')">🟡</button>
+            </div>
+        </div>
+
+        <div id="strandsPaste" style="display:none">
+            <textarea id="strandsInput" placeholder="Paste Strands share text here..." oninput="updateAll()"></textarea>
+        </div>
+
         <button class="secondary-btn" onclick="resetStrands()">Clear All</button>
     </div>
 
@@ -165,64 +174,107 @@
     }
 
     function updateAll() {
-        // --- Wordle Logic (Inverted) ---
-        let rawW = document.getElementById('wordleVal').value.trim().toLowerCase();
-        if (rawW === 'x' || rawW === '0' || rawW === '') {
-            scores.wordle = 0;
-        } else {
-            let val = parseInt(rawW);
-            if (val >= 1 && val <= 6) {
-                scores.wordle = 7 - val; // 1->6, 2->5, 3->4, 4->3, 5->2, 6->1
-            } else {
-                scores.wordle = 0;
+        // --- Wordle Advanced Logic ---
+        let wordleText = document.getElementById('wordleInput').value;
+        let wFinal = 0;
+        let wBreakdownHtml = "";
+
+        if (wordleText.includes('Wordle')) {
+            // Find solve number (X/6)
+            let match = wordleText.match(/(\d|X)\/6/);
+            let solveNum = match ? (match[1] === 'X' ? 7 : parseInt(match[1])) : 0;
+            
+            if (solveNum > 0 && solveNum <= 6) {
+                // 1. Solve Score: (7-solveNum) * 6
+                let solvePoints = (7 - solveNum) * 6;
+                
+                // 2. Count squares
+                let emojiLines = wordleText.trim().split('\n').filter(l => l.match(/[🟩🟨⬛⬜]/));
+                let greensBefore = 0;
+                let yellowCount = 0;
+
+                emojiLines.forEach((line, index) => {
+                    // Count yellows in all lines
+                    yellowCount += (line.match(/🟨/g) || []).length;
+                    
+                    // Count greens ONLY if not the solution line
+                    if (index < emojiLines.length - 1) {
+                        greensBefore += (line.match(/🟩/g) || []).length;
+                    }
+                });
+
+                let yellowPoints = yellowCount / 2;
+                wFinal = solvePoints + greensBefore + yellowPoints;
+
+                wBreakdownHtml = `<table style="margin-top:10px">
+                    <tr><td>Solve (${solveNum}/6)</td><td align="right">${solvePoints}</td></tr>
+                    <tr><td>Greens (Before)</td><td align="right">+ ${greensBefore}</td></tr>
+                    <tr><td>Yellows (${yellowCount})</td><td align="right">+ ${yellowPoints}</td></tr>
+                </table>`;
             }
         }
+        scores.wordle = wFinal;
         document.getElementById('w-score-display').innerText = scores.wordle;
+        document.getElementById('wordleBreakdown').innerHTML = wBreakdownHtml;
 
-        // --- Connections Logic (Blair Scoring) ---
-        let currentLines = document.getElementById('connPaste').style.display !== 'none' 
+        // --- Connections Logic ---
+        let currentConnLines = document.getElementById('connPaste').style.display !== 'none' 
             ? document.getElementById('connInput').value.trim().split('\n').filter(l => l.match(/[🟨🟩🟦🟪]/))
             : [...connLines];
         
         let cTotal = 0;
-        let tableHtml = `<table><tr><th>Line</th><th>Val</th><th>Mult</th><th>Total</th></tr>`;
-        currentLines.forEach((line, i) => {
+        let cBreakdownHtml = `<table><tr><th>Line</th><th>Val</th><th>Mult</th><th>Total</th></tr>`;
+        currentConnLines.forEach((line, i) => {
             let val = CONN_VALS[line] || 0;
             let mult = CONN_MULT[i] || 0;
             let lineTotal = val * mult;
             cTotal += lineTotal;
-            tableHtml += `<tr><td>#${i+1}</td><td>${val}</td><td>x${mult}</td><td><strong>${lineTotal}</strong></td></tr>`;
+            cBreakdownHtml += `<tr><td>#${i+1}</td><td>${val}</td><td>x${mult}</td><td><strong>${lineTotal}</strong></td></tr>`;
         });
-        tableHtml += `</table>`;
+        cBreakdownHtml += `</table>`;
         scores.connections = cTotal;
         document.getElementById('c-score-display').innerText = cTotal;
-        document.getElementById('connBreakdown').innerHTML = currentLines.length ? tableHtml : "";
+        document.getElementById('connBreakdown').innerHTML = currentConnLines.length ? cBreakdownHtml : "";
 
-        // --- Strands Logic ---
-        let sTotal = 0;
-        const bulbs = strandSequence.filter(e => e === '💡').length;
-        sTotal += (bulbs * -0.5);
-        const filtered = strandSequence.filter(e => e !== '💡').reverse();
+        // --- Strands Logic (x2) ---
+        let currentStrands = [];
+        if (document.getElementById('strandsPaste').style.display !== 'none') {
+            const rawText = document.getElementById('strandsInput').value;
+            currentStrands = Array.from(rawText).filter(char => ['🔵', '💡', '🟡'].includes(char));
+        } else {
+            currentStrands = [...strandSequence];
+        }
+
+        let sBase = 0;
+        const bulbs = currentStrands.filter(e => e === '💡').length;
+        sBase += (bulbs * -0.5);
+        
+        const filtered = currentStrands.filter(e => e !== '💡').reverse();
         filtered.forEach((emoji, index) => {
-            if (emoji === '🔵') sTotal += 1;
-            else if (emoji === '🟡') sTotal += (index + 1);
+            if (emoji === '🔵') sBase += 1;
+            else if (emoji === '🟡') sBase += (index + 1);
         });
-        scores.strands = sTotal;
-        document.getElementById('s-score-display').innerText = sTotal;
+
+        scores.strands = sBase * 2;
+        document.getElementById('s-score-display').innerText = scores.strands.toFixed(1);
+        if (document.getElementById('strandsPaste').style.display === 'none') {
+            document.getElementById('strands-display').innerText = strandSequence.length ? strandSequence.join('') : '...';
+        }
 
         // --- Grand Total ---
         document.getElementById('final-w').innerText = scores.wordle;
         document.getElementById('final-c').innerText = scores.connections;
-        document.getElementById('final-s').innerText = scores.strands;
+        document.getElementById('final-s').innerText = scores.strands.toFixed(1);
         document.getElementById('grandTotal').innerText = (scores.wordle + scores.connections + scores.strands).toFixed(1);
     }
 
-    // Connections UI Helpers
+    function resetWordle() { document.getElementById('wordleInput').value = ''; updateAll(); }
+
     function connMode(m) {
         document.getElementById('connBuild').style.display = m === 'build' ? 'block' : 'none';
         document.getElementById('connPaste').style.display = m === 'paste' ? 'block' : 'none';
-        document.getElementById('btnBuild').classList.toggle('active', m === 'build');
-        document.getElementById('btnPaste').classList.toggle('active', m === 'paste');
+        document.getElementById('btnConnBuild').classList.toggle('active', m === 'build');
+        document.getElementById('btnConnPaste').classList.toggle('active', m === 'paste');
         updateAll();
     }
     function addConnLine(l) { connLines.push(l); updateConnUI(); }
@@ -237,13 +289,19 @@
     function updateConnUI() { document.getElementById('connPreview').innerText = connLines.join('\n'); updateAll(); }
     function resetConn() { connLines = []; customConn = []; document.getElementById('connInput').value = ''; updateConnUI(); }
 
-    // Strands UI Helpers
-    function addStrand(e) { strandSequence.push(e); updateStrandsUI(); }
-    function updateStrandsUI() {
-        document.getElementById('strands-display').innerText = strandSequence.length ? strandSequence.join('') : '...';
+    function strandsMode(m) {
+        document.getElementById('strandsBuild').style.display = m === 'build' ? 'block' : 'none';
+        document.getElementById('strandsPaste').style.display = m === 'paste' ? 'block' : 'none';
+        document.getElementById('btnStrandsBuild').classList.toggle('active', m === 'build');
+        document.getElementById('btnStrandsPaste').classList.toggle('active', m === 'paste');
         updateAll();
     }
-    function resetStrands() { strandSequence = []; updateStrandsUI(); }
+    function addStrand(e) { strandSequence.push(e); updateAll(); }
+    function resetStrands() { 
+        strandSequence = []; 
+        document.getElementById('strandsInput').value = ''; 
+        updateAll(); 
+    }
 
     function copyGrandSummary() {
         const grand = document.getElementById('grandTotal').innerText;
