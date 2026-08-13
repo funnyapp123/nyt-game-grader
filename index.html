@@ -116,6 +116,8 @@
                 <div class="vs-label" style="color: #aaa;">Total</div>
                 <div class="p-name right" id="res-tot-2">0</div>
             </div>
+            
+            <button class="main-action" style="margin-top: 20px;" onclick="copyResults()">Copy Results to Clipboard</button>
         </div>
     </div>
 </div>
@@ -437,6 +439,45 @@
     }
     function addStrand(p, e) { state[p].strandSequence.push(e); updateAll(p); }
     function resetStrands(p) { state[p].strandSequence = []; document.getElementById(`strandsInput-${p}`).value = ''; updateAll(p); }
+
+    // Copy Results Functionality
+    function copyResults() {
+        const name1 = document.getElementById('name-1').value || 'Player 1';
+        const name2 = document.getElementById('name-2').value || 'Player 2';
+        const s1 = state[1].scores;
+        const s2 = state[2].scores;
+        
+        const t1 = (s1.wordle + s1.connections + s1.strands).toFixed(1);
+        const t2 = (s2.wordle + s2.connections + s2.strands).toFixed(1);
+        
+        let winnerText = "It's a Tie! 🤝";
+        if (parseFloat(t1) > parseFloat(t2)) winnerText = `${name1} Wins! 🏆`;
+        else if (parseFloat(t2) > parseFloat(t1)) winnerText = `${name2} Wins! 🏆`;
+
+        const textToCopy = `NYT Games Showdown
+${name1} vs ${name2}
+
+${name1}:
+Wordle: ${s1.wordle}
+Connections: ${s1.connections}
+Strands: ${s1.strands.toFixed(1)}
+Total: ${t1}
+
+${name2}:
+Wordle: ${s2.wordle}
+Connections: ${s2.connections}
+Strands: ${s2.strands.toFixed(1)}
+Total: ${t2}
+
+Result: ${winnerText}`;
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            alert("Results copied to clipboard!");
+        }).catch(err => {
+            console.error("Failed to copy text: ", err);
+            alert("Failed to copy results. Please try again.");
+        });
+    }
 
     // Kickoff
     initPlayers();
