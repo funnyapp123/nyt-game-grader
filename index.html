@@ -3,15 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NYT Game Grader</title>
+    <title>NYT Game Grader - 2 Player Edition</title>
     <style>
         :root {
             --yellow: #f9df6d; --green: #a0c35a; --blue: #b0c4ef; --purple: #ba69c8;
-            --bg: #f8f9fa; --card: #ffffff; --text: #1a1a1a;
+            --bg: #e9ecef; --card: #ffffff; --text: #1a1a1a;
         }
         body { font-family: -apple-system, sans-serif; background-color: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .master-container { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100%; max-width: 500px; }
         
+        .app-wrapper { width: 100%; max-width: 550px; }
+        
+        /* Top Level Tabs (Players & Results) */
+        .top-nav { display: flex; gap: 8px; margin-bottom: 15px; }
+        .top-tab { flex: 1; cursor: pointer; padding: 15px; border-radius: 12px; text-align: center; font-weight: 900; font-size: 15px; background: #d0d4dc; color: #555; transition: 0.2s; }
+        .top-tab.active { background: #1a1a1a; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .top-tab.results-tab { background: #a0c35a; color: #fff; }
+        .top-tab.results-tab.active { background: #7a9c3a; }
+
+        .master-container { background: var(--card); padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        
+        .name-input { width: 100%; font-size: 1.5rem; font-weight: bold; border: none; border-bottom: 2px solid #eee; padding: 5px; margin-bottom: 20px; text-align: center; box-sizing: border-box; }
+        .name-input:focus { outline: none; border-bottom: 2px solid #1a1a1a; }
+
+        .player-view { display: none; }
+        .player-view.active { display: block; }
+
         .nav-tabs { display: flex; gap: 8px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 12px; }
         .nav-tab { flex: 1; cursor: pointer; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 13px; }
         .nav-tab.active { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -41,166 +57,243 @@
         table { width: 100%; font-size: 12px; margin-top: 10px; border-collapse: collapse; text-align: left; }
         th, td { padding: 8px; border-bottom: 1px solid #eee; }
 
-        #strands-display { min-height: 80px; background: white; border: 3px solid #e0e0e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 20px; padding: 10px; word-break: break-all; }
+        .strands-display { min-height: 80px; background: white; border: 3px solid #e0e0e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin-bottom: 20px; padding: 10px; word-break: break-all; }
         .strands-btns { display: flex; gap: 15px; justify-content: center; margin-bottom: 10px; }
         .s-btn { font-size: 2rem; padding: 10px 20px; border-radius: 12px; border: none; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; }
         .s-btn:active { transform: translateY(2px); }
+
+        /* Comparison specific */
+        .winner-banner { background: var(--yellow); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .winner-banner h2 { margin: 0; font-size: 2rem; color: #333; }
+        .vs-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .vs-row.grand { font-size: 1.2rem; background: #1a1a1a; color: white; border-radius: 8px; border: none; margin-top: 10px; }
+        .p-name { font-weight: bold; width: 40%; }
+        .p-name.right { text-align: right; }
+        .vs-label { font-size: 0.8rem; color: #888; text-transform: uppercase; width: 20%; text-align: center; }
     </style>
 </head>
 <body>
 
-<div class="master-container">
-    <div class="nav-tabs" id="mainNav">
-        <div class="nav-tab active" onclick="showPane('wordle')">Wordle</div>
-        <div class="nav-tab" onclick="showPane('connections')">Connections</div>
-        <div class="nav-tab" onclick="showPane('strands')">Strands</div>
-        <div class="nav-tab" onclick="showPane('total')">Total</div>
+<div class="app-wrapper">
+    <div class="top-nav">
+        <div class="top-tab active" id="tabTop-1" onclick="switchPlayer(1)">P1</div>
+        <div class="top-tab" id="tabTop-2" onclick="switchPlayer(2)">P2</div>
+        <div class="top-tab results-tab" id="tabTop-3" onclick="switchPlayer(3)">Results</div>
     </div>
 
-    <div id="wordle" class="pane active">
-        <div class="tab-score-display">
-            <span class="score-label">Wordle Score</span>
-            <span class="score-val" id="w-score-display">0</span>
-            <div id="wordleBreakdown"></div>
-        </div>
-        <div class="section-title">Paste Wordle Results</div>
-        <textarea id="wordleInput" placeholder="Paste Wordle share text here..." oninput="updateAll()"></textarea>
-        <button class="secondary-btn" onclick="resetWordle()">Clear Wordle</button>
-    </div>
+    <div class="master-container" id="main-container">
+        <!-- Player 1 & 2 content generated via JS to keep file clean -->
+        <div id="players-container"></div>
 
-    <div id="connections" class="pane">
-        <div class="tab-score-display">
-            <span class="score-label">Blair Score</span>
-            <span class="score-val" id="c-score-display">0</span>
-            <div id="connBreakdown"></div>
-        </div>
-
-        <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
-            <div class="nav-tab active" id="btnConnBuild" onclick="connMode('build')">Builder</div>
-            <div class="nav-tab" id="btnConnPaste" onclick="connMode('paste')">Paste</div>
-        </div>
-
-        <div id="connBuild">
-            <div class="section-title">Quick Add Category</div>
-            <div class="btn-grid">
-                <div class="color-square y" onclick="addConnLine('🟨🟨🟨🟨')">🟨</div>
-                <div class="color-square g" onclick="addConnLine('🟩🟩🟩🟩')">🟩</div>
-                <div class="color-square b" onclick="addConnLine('🟦🟦🟦🟦')">🟦</div>
-                <div class="color-square p" onclick="addConnLine('🟪🟪🟪🟪')">🟪</div>
+        <!-- Comparison Tab -->
+        <div id="view-3" class="player-view">
+            <div class="winner-banner" id="winner-banner">
+                <h2>It's a Tie!</h2>
             </div>
-            <div class="section-title">Build Custom Mistake</div>
-            <div class="custom-row-box">
-                <div class="slots" id="connSlots">
-                    <div class="slot">?</div><div class="slot">?</div><div class="slot">?</div><div class="slot">?</div>
-                </div>
-                <div class="btn-grid">
-                    <div class="color-square y" onclick="pickSlot('🟨')">🟨</div>
-                    <div class="color-square g" onclick="pickSlot('🟩')">🟩</div>
-                    <div class="color-square b" onclick="pickSlot('🟦')">🟦</div>
-                    <div class="color-square p" onclick="pickSlot('🟪')">🟪</div>
-                </div>
-                <button class="main-action" style="background:#636e72" onclick="commitCustomConn()">Add Line</button>
+            
+            <div class="vs-row">
+                <div class="p-name" id="res-name-1">Player 1</div>
+                <div class="vs-label">Names</div>
+                <div class="p-name right" id="res-name-2">Player 2</div>
+            </div>
+            <div class="vs-row">
+                <div class="p-name" id="res-w-1">0</div>
+                <div class="vs-label">Wordle</div>
+                <div class="p-name right" id="res-w-2">0</div>
+            </div>
+            <div class="vs-row">
+                <div class="p-name" id="res-c-1">0</div>
+                <div class="vs-label">Conn.</div>
+                <div class="p-name right" id="res-c-2">0</div>
+            </div>
+            <div class="vs-row">
+                <div class="p-name" id="res-s-1">0</div>
+                <div class="vs-label">Strands</div>
+                <div class="p-name right" id="res-s-2">0</div>
+            </div>
+            <div class="vs-row grand">
+                <div class="p-name" id="res-tot-1">0</div>
+                <div class="vs-label" style="color: #aaa;">Total</div>
+                <div class="p-name right" id="res-tot-2">0</div>
             </div>
         </div>
-
-        <div id="connPaste" style="display:none">
-            <textarea id="connInput" placeholder="Paste Connections share text here..." oninput="updateAll()"></textarea>
-        </div>
-
-        <div class="preview-area" id="connPreview"></div>
-        <button class="secondary-btn" onclick="resetConn()">Reset Board</button>
-    </div>
-
-    <div id="strands" class="pane">
-        <div class="tab-score-display">
-            <span class="score-label">Strands Score</span>
-            <span class="score-val" id="s-score-display">0</span>
-        </div>
-
-        <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
-            <div class="nav-tab active" id="btnStrandsBuild" onclick="strandsMode('build')">Builder</div>
-            <div class="nav-tab" id="btnStrandsPaste" onclick="strandsMode('paste')">Paste</div>
-        </div>
-
-        <div id="strandsBuild">
-            <div id="strands-display">...</div>
-            <div class="strands-btns">
-                <button class="s-btn" onclick="addStrand('🔵')">🔵</button>
-                <button class="s-btn" onclick="addStrand('💡')">💡</button>
-                <button class="s-btn" onclick="addStrand('🟡')">🟡</button>
-            </div>
-        </div>
-
-        <div id="strandsPaste" style="display:none">
-            <textarea id="strandsInput" placeholder="Paste Strands share text here..." oninput="updateAll()"></textarea>
-        </div>
-
-        <button class="secondary-btn" onclick="resetStrands()">Clear All</button>
-    </div>
-
-    <div id="total" class="pane">
-        <div class="tab-score-display" style="background: #1a1a1a; color: white;">
-            <span class="score-label" style="color: #888;">Grand Total</span>
-            <span class="score-val" id="grandTotal" style="color: white;">0</span>
-        </div>
-        <table style="font-size: 16px; width: 100%;">
-            <tr><td style="padding: 15px 8px;">Wordle</td><td align="right"><strong><span id="final-w">0</span></strong></td></tr>
-            <tr><td style="padding: 15px 8px;">Connections</td><td align="right"><strong><span id="final-c">0</span></strong></td></tr>
-            <tr><td style="padding: 15px 8px;">Strands</td><td align="right"><strong><span id="final-s">0</span></strong></td></tr>
-        </table>
-        <button class="main-action" onclick="copyGrandSummary()">Copy Grand Summary</button>
     </div>
 </div>
 
 <script>
-    let scores = { wordle: 0, connections: 0, strands: 0 };
-    let connLines = [];
-    let customConn = [];
-    let strandSequence = [];
+    // State management for both players
+    let state = {
+        1: { scores: { wordle: 0, connections: 0, strands: 0 }, connLines: [], customConn: [], strandSequence: [] },
+        2: { scores: { wordle: 0, connections: 0, strands: 0 }, connLines: [], customConn: [], strandSequence: [] }
+    };
 
     const CONN_VALS = { "🟪🟪🟪🟪": 4, "🟦🟦🟦🟦": 3, "🟩🟩🟩🟩": 2, "🟨🟨🟨🟨": 1 };
     const CONN_MULT = [4, 3, 2, 1];
 
-    function showPane(id) {
-        document.querySelectorAll('.pane').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('#mainNav .nav-tab').forEach(el => el.classList.remove('active'));
+    // Initialize HTML for both players dynamically to avoid massive redundancy
+    function initPlayers() {
+        const container = document.getElementById('players-container');
+        let html = '';
         
-        document.getElementById(id).classList.add('active');
-        const tabs = document.querySelectorAll('#mainNav .nav-tab');
+        for(let p = 1; p <= 2; p++) {
+            html += `
+            <div id="view-${p}" class="player-view ${p===1 ? 'active' : ''}">
+                <input type="text" id="name-${p}" class="name-input" value="Player ${p}" oninput="updateComparison()">
+                
+                <div class="nav-tabs" id="mainNav-${p}">
+                    <div class="nav-tab active" onclick="showPane(${p}, 'wordle')">Wordle</div>
+                    <div class="nav-tab" onclick="showPane(${p}, 'connections')">Connections</div>
+                    <div class="nav-tab" onclick="showPane(${p}, 'strands')">Strands</div>
+                    <div class="nav-tab" onclick="showPane(${p}, 'total')">Total</div>
+                </div>
+
+                <!-- Wordle -->
+                <div id="wordle-${p}" class="pane active">
+                    <div class="tab-score-display">
+                        <span class="score-label">Wordle Score</span>
+                        <span class="score-val" id="w-score-display-${p}">0</span>
+                        <div id="wordleBreakdown-${p}"></div>
+                    </div>
+                    <div class="section-title">Paste Wordle Results</div>
+                    <textarea id="wordleInput-${p}" placeholder="Paste Wordle share text here..." oninput="updateAll(${p})"></textarea>
+                    <button class="secondary-btn" onclick="resetWordle(${p})">Clear Wordle</button>
+                </div>
+
+                <!-- Connections -->
+                <div id="connections-${p}" class="pane">
+                    <div class="tab-score-display">
+                        <span class="score-label">Blair Score</span>
+                        <span class="score-val" id="c-score-display-${p}">0</span>
+                        <div id="connBreakdown-${p}"></div>
+                    </div>
+
+                    <!-- Paste mode is default now -->
+                    <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
+                        <div class="nav-tab active" id="btnConnPaste-${p}" onclick="connMode(${p}, 'paste')">Paste</div>
+                        <div class="nav-tab" id="btnConnBuild-${p}" onclick="connMode(${p}, 'build')">Builder</div>
+                    </div>
+
+                    <div id="connPaste-${p}" style="display:block">
+                        <textarea id="connInput-${p}" placeholder="Paste Connections share text here..." oninput="updateAll(${p})"></textarea>
+                    </div>
+
+                    <div id="connBuild-${p}" style="display:none">
+                        <div class="section-title">Quick Add Category</div>
+                        <div class="btn-grid">
+                            <div class="color-square y" onclick="addConnLine(${p}, '🟨🟨🟨🟨')">🟨</div>
+                            <div class="color-square g" onclick="addConnLine(${p}, '🟩🟩🟩🟩')">🟩</div>
+                            <div class="color-square b" onclick="addConnLine(${p}, '🟦🟦🟦🟦')">🟦</div>
+                            <div class="color-square p" onclick="addConnLine(${p}, '🟪🟪🟪🟪')">🟪</div>
+                        </div>
+                        <div class="section-title">Build Custom Mistake</div>
+                        <div class="custom-row-box">
+                            <div class="slots" id="connSlots-${p}">
+                                <div class="slot">?</div><div class="slot">?</div><div class="slot">?</div><div class="slot">?</div>
+                            </div>
+                            <div class="btn-grid">
+                                <div class="color-square y" onclick="pickSlot(${p}, '🟨')">🟨</div>
+                                <div class="color-square g" onclick="pickSlot(${p}, '🟩')">🟩</div>
+                                <div class="color-square b" onclick="pickSlot(${p}, '🟦')">🟦</div>
+                                <div class="color-square p" onclick="pickSlot(${p}, '🟪')">🟪</div>
+                            </div>
+                            <button class="main-action" style="background:#636e72" onclick="commitCustomConn(${p})">Add Line</button>
+                        </div>
+                    </div>
+
+                    <div class="preview-area" id="connPreview-${p}"></div>
+                    <button class="secondary-btn" onclick="resetConn(${p})">Reset Board</button>
+                </div>
+
+                <!-- Strands -->
+                <div id="strands-${p}" class="pane">
+                    <div class="tab-score-display">
+                        <span class="score-label">Strands Score</span>
+                        <span class="score-val" id="s-score-display-${p}">0</span>
+                    </div>
+
+                    <!-- Paste mode is default now -->
+                    <div class="nav-tabs" style="margin-bottom:10px; background: #f0f0f0;">
+                        <div class="nav-tab active" id="btnStrandsPaste-${p}" onclick="strandsMode(${p}, 'paste')">Paste</div>
+                        <div class="nav-tab" id="btnStrandsBuild-${p}" onclick="strandsMode(${p}, 'build')">Builder</div>
+                    </div>
+
+                    <div id="strandsPaste-${p}" style="display:block">
+                        <textarea id="strandsInput-${p}" placeholder="Paste Strands share text here..." oninput="updateAll(${p})"></textarea>
+                    </div>
+
+                    <div id="strandsBuild-${p}" style="display:none">
+                        <div class="strands-display" id="strands-display-${p}">...</div>
+                        <div class="strands-btns">
+                            <button class="s-btn" onclick="addStrand(${p}, '🔵')">🔵</button>
+                            <button class="s-btn" onclick="addStrand(${p}, '💡')">💡</button>
+                            <button class="s-btn" onclick="addStrand(${p}, '🟡')">🟡</button>
+                        </div>
+                    </div>
+
+                    <button class="secondary-btn" onclick="resetStrands(${p})">Clear All</button>
+                </div>
+
+                <!-- Total -->
+                <div id="total-${p}" class="pane">
+                    <div class="tab-score-display" style="background: #1a1a1a; color: white;">
+                        <span class="score-label" style="color: #888;">Grand Total</span>
+                        <span class="score-val" id="grandTotal-${p}" style="color: white;">0</span>
+                    </div>
+                    <table style="font-size: 16px; width: 100%;">
+                        <tr><td style="padding: 15px 8px;">Wordle</td><td align="right"><strong><span id="final-w-${p}">0</span></strong></td></tr>
+                        <tr><td style="padding: 15px 8px;">Connections</td><td align="right"><strong><span id="final-c-${p}">0</span></strong></td></tr>
+                        <tr><td style="padding: 15px 8px;">Strands</td><td align="right"><strong><span id="final-s-${p}">0</span></strong></td></tr>
+                    </table>
+                </div>
+            </div>`;
+        }
+        container.innerHTML = html;
+        updateComparison();
+    }
+
+    // Top Level Tabs
+    function switchPlayer(viewId) {
+        document.querySelectorAll('.top-tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tabTop-${viewId}`).classList.add('active');
+        
+        document.querySelectorAll('.player-view').forEach(el => el.classList.remove('active'));
+        document.getElementById(`view-${viewId}`).classList.add('active');
+    }
+
+    // Inner Tabs
+    function showPane(p, id) {
+        const view = document.getElementById(`view-${p}`);
+        view.querySelectorAll('.pane').forEach(el => el.classList.remove('active'));
+        view.querySelectorAll(`#mainNav-${p} .nav-tab`).forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(`${id}-${p}`).classList.add('active');
+        const tabs = view.querySelectorAll(`#mainNav-${p} .nav-tab`);
         if(id === 'wordle') tabs[0].classList.add('active');
         else if(id === 'connections') tabs[1].classList.add('active');
         else if(id === 'strands') tabs[2].classList.add('active');
         else if(id === 'total') tabs[3].classList.add('active');
     }
 
-    function updateAll() {
-        // --- Wordle Advanced Logic ---
-        let wordleText = document.getElementById('wordleInput').value;
+    function updateAll(p) {
+        let pState = state[p];
+
+        // --- Wordle ---
+        let wordleText = document.getElementById(`wordleInput-${p}`).value;
         let wFinal = 0;
         let wBreakdownHtml = "";
 
         if (wordleText.includes('Wordle')) {
-            // Find solve number (X/6)
             let match = wordleText.match(/(\d|X)\/6/);
             let solveNum = match ? (match[1] === 'X' ? 7 : parseInt(match[1])) : 0;
             
             if (solveNum > 0 && solveNum <= 6) {
-                // 1. Solve Score: (7-solveNum) * 6
                 let solvePoints = (7 - solveNum) * 6;
-                
-                // 2. Count squares
                 let emojiLines = wordleText.trim().split('\n').filter(l => l.match(/[🟩🟨⬛⬜]/));
-                let greensBefore = 0;
-                let yellowCount = 0;
+                let greensBefore = 0, yellowCount = 0;
 
                 emojiLines.forEach((line, index) => {
-                    // Count yellows in all lines
                     yellowCount += (line.match(/🟨/g) || []).length;
-                    
-                    // Count greens ONLY if not the solution line
-                    if (index < emojiLines.length - 1) {
-                        greensBefore += (line.match(/🟩/g) || []).length;
-                    }
+                    if (index < emojiLines.length - 1) greensBefore += (line.match(/🟩/g) || []).length;
                 });
 
                 let yellowPoints = yellowCount / 2;
@@ -213,14 +306,15 @@
                 </table>`;
             }
         }
-        scores.wordle = wFinal;
-        document.getElementById('w-score-display').innerText = scores.wordle;
-        document.getElementById('wordleBreakdown').innerHTML = wBreakdownHtml;
+        pState.scores.wordle = wFinal;
+        document.getElementById(`w-score-display-${p}`).innerText = pState.scores.wordle;
+        document.getElementById(`wordleBreakdown-${p}`).innerHTML = wBreakdownHtml;
 
-        // --- Connections Logic ---
-        let currentConnLines = document.getElementById('connPaste').style.display !== 'none' 
-            ? document.getElementById('connInput').value.trim().split('\n').filter(l => l.match(/[🟨🟩🟦🟪]/))
-            : [...connLines];
+        // --- Connections ---
+        let isPasteConn = document.getElementById(`connPaste-${p}`).style.display !== 'none';
+        let currentConnLines = isPasteConn 
+            ? document.getElementById(`connInput-${p}`).value.trim().split('\n').filter(l => l.match(/[🟨🟩🟦🟪]/))
+            : [...pState.connLines];
         
         let cTotal = 0;
         let cBreakdownHtml = `<table><tr><th>Line</th><th>Val</th><th>Mult</th><th>Total</th></tr>`;
@@ -232,17 +326,18 @@
             cBreakdownHtml += `<tr><td>#${i+1}</td><td>${val}</td><td>x${mult}</td><td><strong>${lineTotal}</strong></td></tr>`;
         });
         cBreakdownHtml += `</table>`;
-        scores.connections = cTotal;
-        document.getElementById('c-score-display').innerText = cTotal;
-        document.getElementById('connBreakdown').innerHTML = currentConnLines.length ? cBreakdownHtml : "";
+        pState.scores.connections = cTotal;
+        document.getElementById(`c-score-display-${p}`).innerText = cTotal;
+        document.getElementById(`connBreakdown-${p}`).innerHTML = currentConnLines.length ? cBreakdownHtml : "";
 
-        // --- Strands Logic (x2) ---
+        // --- Strands ---
+        let isPasteStrands = document.getElementById(`strandsPaste-${p}`).style.display !== 'none';
         let currentStrands = [];
-        if (document.getElementById('strandsPaste').style.display !== 'none') {
-            const rawText = document.getElementById('strandsInput').value;
+        if (isPasteStrands) {
+            const rawText = document.getElementById(`strandsInput-${p}`).value;
             currentStrands = Array.from(rawText).filter(char => ['🔵', '💡', '🟡'].includes(char));
         } else {
-            currentStrands = [...strandSequence];
+            currentStrands = [...pState.strandSequence];
         }
 
         let sBase = 0;
@@ -255,59 +350,97 @@
             else if (emoji === '🟡') sBase += (index + 1);
         });
 
-        scores.strands = sBase * 2;
-        document.getElementById('s-score-display').innerText = scores.strands.toFixed(1);
-        if (document.getElementById('strandsPaste').style.display === 'none') {
-            document.getElementById('strands-display').innerText = strandSequence.length ? strandSequence.join('') : '...';
+        pState.scores.strands = sBase * 2;
+        document.getElementById(`s-score-display-${p}`).innerText = pState.scores.strands.toFixed(1);
+        if (!isPasteStrands) {
+            document.getElementById(`strands-display-${p}`).innerText = pState.strandSequence.length ? pState.strandSequence.join('') : '...';
         }
 
-        // --- Grand Total ---
-        document.getElementById('final-w').innerText = scores.wordle;
-        document.getElementById('final-c').innerText = scores.connections;
-        document.getElementById('final-s').innerText = scores.strands.toFixed(1);
-        document.getElementById('grandTotal').innerText = (scores.wordle + scores.connections + scores.strands).toFixed(1);
+        // --- Totals ---
+        let grand = pState.scores.wordle + pState.scores.connections + pState.scores.strands;
+        document.getElementById(`final-w-${p}`).innerText = pState.scores.wordle;
+        document.getElementById(`final-c-${p}`).innerText = pState.scores.connections;
+        document.getElementById(`final-s-${p}`).innerText = pState.scores.strands.toFixed(1);
+        document.getElementById(`grandTotal-${p}`).innerText = grand.toFixed(1);
+
+        updateComparison();
     }
 
-    function resetWordle() { document.getElementById('wordleInput').value = ''; updateAll(); }
+    // Comparison Logic
+    function updateComparison() {
+        const name1 = document.getElementById('name-1').value || 'Player 1';
+        const name2 = document.getElementById('name-2').value || 'Player 2';
+        
+        document.getElementById('tabTop-1').innerText = name1;
+        document.getElementById('tabTop-2').innerText = name2;
 
-    function connMode(m) {
-        document.getElementById('connBuild').style.display = m === 'build' ? 'block' : 'none';
-        document.getElementById('connPaste').style.display = m === 'paste' ? 'block' : 'none';
-        document.getElementById('btnConnBuild').classList.toggle('active', m === 'build');
-        document.getElementById('btnConnPaste').classList.toggle('active', m === 'paste');
-        updateAll();
-    }
-    function addConnLine(l) { connLines.push(l); updateConnUI(); }
-    function pickSlot(e) { if(customConn.length < 4) { customConn.push(e); renderConnSlots(); } }
-    function renderConnSlots() {
-        const slots = document.querySelectorAll('#connSlots .slot');
-        slots.forEach((s, i) => s.innerText = customConn[i] || '?');
-    }
-    function commitCustomConn() {
-        if(customConn.length === 4) { connLines.push(customConn.join('')); customConn = []; renderConnSlots(); updateConnUI(); }
-    }
-    function updateConnUI() { document.getElementById('connPreview').innerText = connLines.join('\n'); updateAll(); }
-    function resetConn() { connLines = []; customConn = []; document.getElementById('connInput').value = ''; updateConnUI(); }
+        document.getElementById('res-name-1').innerText = name1;
+        document.getElementById('res-name-2').innerText = name2;
 
-    function strandsMode(m) {
-        document.getElementById('strandsBuild').style.display = m === 'build' ? 'block' : 'none';
-        document.getElementById('strandsPaste').style.display = m === 'paste' ? 'block' : 'none';
-        document.getElementById('btnStrandsBuild').classList.toggle('active', m === 'build');
-        document.getElementById('btnStrandsPaste').classList.toggle('active', m === 'paste');
-        updateAll();
-    }
-    function addStrand(e) { strandSequence.push(e); updateAll(); }
-    function resetStrands() { 
-        strandSequence = []; 
-        document.getElementById('strandsInput').value = ''; 
-        updateAll(); 
+        const s1 = state[1].scores;
+        const s2 = state[2].scores;
+
+        document.getElementById('res-w-1').innerText = s1.wordle;
+        document.getElementById('res-w-2').innerText = s2.wordle;
+        document.getElementById('res-c-1').innerText = s1.connections;
+        document.getElementById('res-c-2').innerText = s2.connections;
+        document.getElementById('res-s-1').innerText = s1.strands.toFixed(1);
+        document.getElementById('res-s-2').innerText = s2.strands.toFixed(1);
+
+        const t1 = s1.wordle + s1.connections + s1.strands;
+        const t2 = s2.wordle + s2.connections + s2.strands;
+
+        document.getElementById('res-tot-1').innerText = t1.toFixed(1);
+        document.getElementById('res-tot-2').innerText = t2.toFixed(1);
+
+        const banner = document.getElementById('winner-banner');
+        if(t1 > t2) {
+            banner.innerHTML = `<h2>${name1} Wins! 🏆</h2>`;
+            banner.style.background = 'var(--green)';
+        } else if(t2 > t1) {
+            banner.innerHTML = `<h2>${name2} Wins! 🏆</h2>`;
+            banner.style.background = 'var(--purple)';
+        } else {
+            banner.innerHTML = `<h2>It's a Tie! 🤝</h2>`;
+            banner.style.background = 'var(--yellow)';
+        }
     }
 
-    function copyGrandSummary() {
-        const grand = document.getElementById('grandTotal').innerText;
-        const text = `NYT Games Daily Score: ${grand}\nWordle: ${scores.wordle}\nConnections: ${scores.connections}\nStrands: ${scores.strands}`;
-        navigator.clipboard.writeText(text).then(() => alert("Summary copied to clipboard!"));
+    // Handlers
+    function resetWordle(p) { document.getElementById(`wordleInput-${p}`).value = ''; updateAll(p); }
+
+    function connMode(p, m) {
+        document.getElementById(`connBuild-${p}`).style.display = m === 'build' ? 'block' : 'none';
+        document.getElementById(`connPaste-${p}`).style.display = m === 'paste' ? 'block' : 'none';
+        document.getElementById(`btnConnBuild-${p}`).classList.toggle('active', m === 'build');
+        document.getElementById(`btnConnPaste-${p}`).classList.toggle('active', m === 'paste');
+        updateAll(p);
     }
+    function addConnLine(p, l) { state[p].connLines.push(l); updateConnUI(p); }
+    function pickSlot(p, e) { if(state[p].customConn.length < 4) { state[p].customConn.push(e); renderConnSlots(p); } }
+    function renderConnSlots(p) {
+        const slots = document.querySelectorAll(`#connSlots-${p} .slot`);
+        slots.forEach((s, i) => s.innerText = state[p].customConn[i] || '?');
+    }
+    function commitCustomConn(p) {
+        if(state[p].customConn.length === 4) { state[p].connLines.push(state[p].customConn.join('')); state[p].customConn = []; renderConnSlots(p); updateConnUI(p); }
+    }
+    function updateConnUI(p) { document.getElementById(`connPreview-${p}`).innerText = state[p].connLines.join('\n'); updateAll(p); }
+    function resetConn(p) { state[p].connLines = []; state[p].customConn = []; document.getElementById(`connInput-${p}`).value = ''; updateConnUI(p); }
+
+    function strandsMode(p, m) {
+        document.getElementById(`strandsBuild-${p}`).style.display = m === 'build' ? 'block' : 'none';
+        document.getElementById(`strandsPaste-${p}`).style.display = m === 'paste' ? 'block' : 'none';
+        document.getElementById(`btnStrandsBuild-${p}`).classList.toggle('active', m === 'build');
+        document.getElementById(`btnStrandsPaste-${p}`).classList.toggle('active', m === 'paste');
+        updateAll(p);
+    }
+    function addStrand(p, e) { state[p].strandSequence.push(e); updateAll(p); }
+    function resetStrands(p) { state[p].strandSequence = []; document.getElementById(`strandsInput-${p}`).value = ''; updateAll(p); }
+
+    // Kickoff
+    initPlayers();
+
 </script>
 </body>
 </html>
